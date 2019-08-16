@@ -1,0 +1,100 @@
+server:
+  port: 8299
+  tomcat:
+    max-connections: 110
+    max-threads: 100
+
+#线程池
+threadpool:
+  #其他线程池
+  other:
+    corePoolSize: 50
+    maxPoolSize: 60
+    threadNamePrefix: otherThreadPool-
+    waitForTasksToCompleteOnShutdown: true
+    awaitTerminationSeconds: 60
+
+ip: 172.18.0.1
+#ip: 39.106.144.161
+
+spring:
+  cloud:
+    service-registry:
+      auto-registration:
+        enabled: true
+  application:
+    name: virtualNumberAdministrate
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5Dialect
+    properties:
+      hibernate:
+        format_sql: true
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    #隐号管理数据库：virtual_number_administrate
+    #人员库数据库：pzhframe_base_organization
+    #短隐号基础服务数据库：hiddent_call
+    url: jdbc:mysql://${ip}:3316/virtual_number_administrate?useSSL=false&verifyServerCertificate=false&useUnicode=true&characterEncoding=UTF8
+    username: dbadmin_app
+    password: dap12345678@
+
+  data:
+    elasticsearch:
+      cluster-name: elasticsearch
+      cluster-nodes: ${ip}:9300
+      local: false
+      repositories:
+        enable: true
+
+  redis:
+    password: qj12345678@
+    host: ${ip}
+    port: 6379
+
+  redisson:
+    host: redis://${ip}:6379
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+#logging:
+#  level:
+#    org:
+#      hibernate:
+#        SQL: debug
+#        type:
+#          descriptor:
+#            sql: trace
+
+springfox:
+  documentation:
+    swagger:
+      v2:
+        path: /
+
+hystrix:
+  command:
+    default:
+      execution:
+        timeout:
+          enabled: true
+        isolation:
+          thread:
+            timeoutInMilliseconds: 20000
+
+ribbon:
+  ReadTimeout: 20000
+  ConnectTimeout: 20000
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.cloud.client.ip-address}:${server.port}
+  client:
+    service-url:
+      defaultZone: http://admin:admin@${ip}:1025/eureka
+      service-id: virtualNumberAdministrate
+
+redis-sentinel:
+  master: mymaster

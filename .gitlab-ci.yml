@@ -1,0 +1,123 @@
+stages:
+  - sonar
+  - test
+  - build
+  - deploy
+cache:
+  paths:
+    - .m2/
+    
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2"
+  MAVEN_IMAGE: registry.cn-beijing.aliyuncs.com/qianjia2018/qianjia_prod:maven3-jdk8
+  CONTAINER_NAME: VirtualNumberAdministrate_Java
+
+  LAN_REPO: registry-vpc.cn-beijing.aliyuncs.com/qianjia2018
+  WAN_REPO: registry.cn-beijing.aliyuncs.com/qianjia2018
+
+  DEV_REPO:  $WAN_REPO/qianjia_dev
+  PRED_REPO: $WAN_REPO/qianjia_pred
+  PROD_REPO: $LAN_REPO/qianjia_prod
+
+
+sonar check:
+    image: registry.cn-beijing.aliyuncs.com/qianjia2018/qianjia_dev:sonar1
+    stage: sonar
+    script:
+      - /opt/sonar-runner-2.4/bin/sonar-runner -Dsonar.projectName=$CONTAINER_NAME  -Dsonar.projectKey=$CONTAINER_NAME -Dsonar.projectVersion=1.0 -Dsonar.sources=. -Dsonar.language=java -Dsonar.java.binaries=./*
+    tags: 
+      - sonarqube-200
+    only:
+      - dev
+  
+test and build image dev:
+    image: $MAVEN_IMAGE
+    stage: test
+    script:
+      - mvn  package docker:build -q -Dmaven.test.skip=false
+    tags:
+      - maven    
+    only:
+      - release
+      
+build image:
+    image: $MAVEN_IMAGE
+    stage: test
+    script:
+      - mvn  package docker:build -q -Dmaven.test.skip=true
+    tags:
+      - maven    
+    only:
+      - dev
+      - master
+
+      
+push image dev:
+    stage: build
+    before_script:
+      - docker login --username=wangnannan@1520818330092673 --password="qj123123" registry-vpc.cn-beijing.aliyuncs.com
+    script:
+      - docker tag  $DEV_REPO:$CONTAINER_NAME  $LAN_REPO/qianjia_dev:$CONTAINER_NAME
+      - docker push $LAN_REPO/qianjia_dev:$CONTAINER_NAME
+    tags:
+      - docker-run
+    only:
+      - dev
+    when: on_success
+      
+push image pred:
+    stage: build
+    before_script:
+      - docker login --username=wangnannan@1520818330092673 --password="qj123123" registry-vpc.cn-beijing.aliyuncs.com
+    script:
+      - docker tag $DEV_REPO:$CONTAINER_NAME  $LAN_REPO/qianjia_pred:$CONTAINER_NAME
+      - docker push $LAN_REPO/qianjia_pred:$CONTAINER_NAME
+    tags:
+      - docker-run
+    only:
+      - release
+    when: on_success
+    
+push image prod:
+    stage: build
+    before_script:
+      - docker login --username=wangnannan@1520818330092673 --password="qj123123" registry-vpc.cn-beijing.aliyuncs.com
+    script:
+      - docker tag $DEV_REPO:$CONTAINER_NAME  $PROD_REPO:$CONTAINER_NAME
+      - docker push $PROD_REPO:$CONTAINER_NAME
+    tags:
+      - docker-run
+    only:
+      - master
+    when: on_success
+
+    
+ssh run on remote machine dev:
+    stage: deploy
+    script:
+      - bash ~/.local/bin/200.sh   $CONTAINER_NAME     8299 8299    $DEV_REPO:$CONTAINER_NAME  guojia   192.168.10.200
+    tags:
+      - shell-200
+    only:
+      - dev 
+    when: on_success
+    
+ssh run on remote machine pred:
+    stage: deploy
+    script:
+      - bash ~/.local/bin/deploy.sh   $CONTAINER_NAME     8299 8299   $PRED_REPO:$CONTAINER_NAME  zp   39.106.144.161
+    tags:
+      - shell-prod
+    only:
+      - release 
+    when: on_success
+      
+ssh run on remote machine prod:
+    stage: deploy
+    script:
+      - bash ~/.local/bin/deploy.sh   $CONTAINER_NAME  8299 8299  $PROD_REPO:$CONTAINER_NAME    zp   39.106.17.245
+    tags:
+      - shell-prod
+    only:
+      - master
+    when: on_success

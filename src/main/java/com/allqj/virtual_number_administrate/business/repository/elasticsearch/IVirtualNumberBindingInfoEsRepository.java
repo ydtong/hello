@@ -1,0 +1,8 @@
+package com.allqj.virtual_number_administrate.business.repository.elasticsearch;
+
+import com.allqj.virtual_number_administrate.business.repository.elasticsearch.entity.VirtualNumberBindingInfoEsEntity;
+import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
+
+public interface IVirtualNumberBindingInfoEsRepository extends ElasticsearchRepository<VirtualNumberBindingInfoEsEntity, Integer> {
+
+}
